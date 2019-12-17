@@ -8,5 +8,8 @@ trait VisualizationTest extends MilestoneSuite {
 
   // Implement tests for the methods of the `Visualization` object
 
+  @Test def interpolateColorTest(): Unit = {
+//    Visualization.interpolateColor()
+  }
 
 }
