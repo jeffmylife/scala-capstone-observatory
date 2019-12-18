@@ -24,8 +24,52 @@ object Visualization extends VisualizationInterface with App {
   }
   final val rgb_table = generateColors()
 
+  // kilometers
+  final val EARTHS_RADIUS = 6378.137
+
+  final val POWER = 2
 
 
+
+  def ~=(x: Double, y: Double, precision: Double) = {
+    if ((x - y).abs < precision) true else false
+  }
+
+  def ~=(location1: Location, location2: Location, precision: Double):Boolean = {
+    if ((location1.lon - location2.lon).abs < precision
+    && ((location1.lat - location2.lat).abs < precision)) true else false
+  }
+
+
+  def greatCircleDistance(location1: Location, location2: Location):Double = {
+    // equidistant
+    if (location1==location2 ||
+      ~=(location1, location2, 10^(-9))) return 0.0
+
+    // antipodal
+    if (location1.lat == -1 * location2.lat
+      && (~=(location1.lon, location2.lon + 180, 10^(-5))
+      || ~=(location1.lon, location2.lon - 180, 10^(-5)))) return EARTHS_RADIUS *  Math.PI
+
+    // otherwise
+    val phi1 = location1.lat.toRadians
+    val phi2 = location2.lat.toRadians
+    val dLambda = (location1.lon.toRadians - location2.lon.toRadians).abs
+
+    val dSigma = Math.acos(
+      Math.sin(phi1) * Math.sin(phi2) +
+        Math.cos(phi1) * Math.cos(phi2) * Math.cos(dLambda))
+
+    // meters
+    EARTHS_RADIUS * dSigma * 1000
+  }
+
+//  println(greatCircleDistance(Location(32.7157360, -117.1610870), location2 = Location(29.951065, -90.071533)))
+
+  def weightingFunctionIDW(l1: Location, l2: Location): Double = {
+    val denom = Math.pow(greatCircleDistance(l1, l2), POWER)
+    if (denom==0.0) Double.PositiveInfinity else 1 / denom
+  }
 
   /**
     * @param temperatures Known temperatures: pairs containing a location and the temperature at this location
@@ -33,11 +77,30 @@ object Visualization extends VisualizationInterface with App {
     * @return The predicted temperature at `location`
     */
   def predictTemperature(temperatures: Iterable[(Location, Temperature)], location: Location): Temperature = {
-    val locationMatched = temperatures.filter(_._1 == location)
-    if (locationMatched.size ==0) return -274
+    // exact matches
+    val locationMatched = temperatures.filter(t => t._1 == location || ~=(t._1,location, 10^(-9)))
     if (locationMatched.size > 1) throw new Exception
-   locationMatched.head._2
+    if (locationMatched.nonEmpty) return locationMatched.head._2
+
+    // inverse distance weighting
+    val accumulators = temperatures.map{known =>
+      val d = greatCircleDistance(known._1, location)
+      if (d < 1000) return known._2
+      val denom = Math.pow(d, POWER)
+      val weight = if (denom==0.0) Double.PositiveInfinity else 1 / denom
+      if (weight.isInfinity) return known._2
+      (known._2, weight)
+    }.foldLeft((0.0, 0.0)) {
+      case ((accumulateWeights, accumulateProducts), (w, t)) => (accumulateWeights + w, accumulateProducts + t * w)
+    }
+
+    accumulators._2 / accumulators._1
   }
+//   println(predictTemperature(Extraction
+//    .locateTemperatures(1975, "/stations.csv", "/1975.csv").map(x => (x._2, x._3)),
+//    Location(32.7157360, -117.1610870)))
+
+
 
   /**
     * @param points Pairs containing a value and its associated color
@@ -92,7 +155,6 @@ object Visualization extends VisualizationInterface with App {
     * @return A 360×180 image where each pixel shows the predicted temperature at its location
     */
   def visualize(temperatures: Iterable[(Location, Temperature)], colors: Iterable[(Temperature, Color)]): Image = {
-
 
     ???
   }
