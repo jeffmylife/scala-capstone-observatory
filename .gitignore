@@ -1,4 +1,5 @@
 # Project exclude paths
+.idea
 /capstone-ui/target/
 /capstone-ui/target/scala-2.13/classes/
 /capstone-ui/target/scala-2.13/test-classes/

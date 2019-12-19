@@ -21,11 +21,11 @@ trait ExtractionTest extends MilestoneSuite {
     assert(constraints.forall(identity))
   }
 
-  @Test def testAllTemps(): Unit = {
-    val yearsToTest = 1975 to 1976
-
-    yearsToTest.foreach(y => testTemps(y))
-  }
+//  @Test def testAllTemps(): Unit = {
+//    val yearsToTest = 1975 to 1976
+//
+//    yearsToTest.foreach(y => testTemps(y))
+//  }
 
 
 }
